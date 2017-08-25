@@ -9,15 +9,19 @@
     "build": "cross-env NODE_ENV=production webpack --progress --hide-modules"
   },
   "dependencies": {
+    "browser-request": "^0.3.3",
     "vue": "^2.4.2",
-    "vuetify": "^0.14.7"
+    "vue-material": "^0.7.4"
   },
   "devDependencies": {
     "babel-core": "^6.0.0",
     "babel-loader": "^6.0.0",
-    "babel-preset-latest": "^6.0.0",
+    "babel-preset-es2017": "^6.24.1",
     "cross-env": "^3.0.0",
     "css-loader": "^0.25.0",
+    "eslint": "^4.5.0",
+    "eslint-loader": "^1.9.0",
+    "eslint-plugin-vue": "^3.12.0",
     "file-loader": "^0.9.0",
     "node-sass": "^4.5.0",
     "sass-loader": "^5.0.1",

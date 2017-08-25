@@ -1,111 +1,164 @@
 <template>
-  <v-app light>
-    <v-navigation-drawer
-      persistent
-      :mini-variant="miniVariant"
-      :clipped="clipped"
-      v-model="drawer"
-    >
-      <v-list>
-        <v-list-tile 
-          v-for="(item, i) in items"
-          :key="i"
-          value="true"
-        >
-          <v-list-tile-action>
-            <v-icon light v-html="item.icon"></v-icon>
-          </v-list-tile-action>
-          <v-list-tile-content>
-            <v-list-tile-title v-text="item.title"></v-list-tile-title>
-          </v-list-tile-content>
-        </v-list-tile>
-      </v-list>
-    </v-navigation-drawer>
-    <v-toolbar fixed>
-      <v-toolbar-side-icon @click.native.stop="drawer = !drawer"></v-toolbar-side-icon>
-      <v-btn 
-        icon
-        @click.native.stop="miniVariant = !miniVariant"
-      >
-        <v-icon v-html="miniVariant ? 'chevron_right' : 'chevron_left'"></v-icon>
-      </v-btn>
-      <v-btn
-        icon
-        @click.native.stop="clipped = !clipped"
-      >
-        <v-icon>web</v-icon>
-      </v-btn>
-      <v-btn
-        icon
-        @click.native.stop="fixed = !fixed"
-      >
-        <v-icon>remove</v-icon>
-      </v-btn>
-      <v-toolbar-title v-text="title"></v-toolbar-title>
-      <v-spacer></v-spacer>
-      <v-btn
-        icon
-        @click.native.stop="rightDrawer = !rightDrawer"
-      >
-        <v-icon>menu</v-icon>
-      </v-btn>
-    </v-toolbar>
-    <main>
-      <v-container fluid>
-        <v-slide-y-transition mode="out-in">
-          <v-layout column align-center>
-            <img src="/public/v.png" alt="Vuetify.js" class="mb-5" />
-            <blockquote>
-              &#8220;First, solve the problem. Then, write the code.&#8221;
-              <footer>
-                <small>
-                  <em>&mdash;John Johnson</em>
-                </small>
-              </footer>
-            </blockquote>
-          </v-layout>
-        </v-slide-y-transition>
-      </v-container>
+  <div class="app-viewport" id="application">
+    <md-sidenav ref="sidebar" class="md-left md-fixed">
+      <md-toolbar class="md-account-header">
+        <md-list class="md-transparent">
+          <md-list-item>
+            <div class="md-list-text-container">
+              <span>Giuseppe Menti</span>
+              <span>mentifg@gmail.com</span>
+            </div>
+            <md-button class="md-icon-button md-list-action">
+              <md-icon>arrow_drop_down</md-icon>
+            </md-button>
+          </md-list-item>
+        </md-list>
+      </md-toolbar>
+    </md-sidenav>
+
+    <md-whiteframe md-elevation="3" class="main-toolbar">
+      <md-toolbar class="md-large">
+        <div class="md-toolbar-container">
+          <md-button class="md-icon-button" @click="openSideBar">
+            <md-icon>menu</md-icon>
+          </md-button>
+        </div>
+
+        <div class="md-toolbar-container">
+          <h2 class="md-title">Últimos tweets</h2>
+        </div>
+      </md-toolbar>
+    </md-whiteframe>
+
+    <main class="main-content">
+      <md-list v-if="isBooted" class="md-double-line">
+        <md-list-item v-for="tweet in tweets" :key="tweet.id">
+          <md-avatar class="md-avatar-icon">
+            <img :src="'https://files.coinmarketcap.com/static/img/coins/32x32/' + currencyService.getByTwitterId(tweet.twitterId)[0].name.toLowerCase() + '.png'" alt="Avatar">
+          </md-avatar>
+
+          <div class="md-list-text-container">
+          <span>
+            <template v-for="currency in currencyService.getByTwitterId(tweet.twitterId)">
+              {{ currency.name + " " }}
+            </template>
+          </span>
+            <span>{{ tweet.message }}</span>
+            <p>{{ getTweetDate(tweet.createdAt) }}</p>
+          </div>
+        </md-list-item>
+      </md-list>
+      <div v-else>
+        <md-layout md-align="center" md-gutter="80">
+          <md-spinner :md-size="150" md-indeterminate></md-spinner>
+        </md-layout>
+      </div>
     </main>
-    <v-navigation-drawer
-      temporary
-      :right="right"
-      v-model="rightDrawer"
-    >
-      <v-list>
-        <v-list-tile @click.native="right = !right">
-          <v-list-tile-action>
-            <v-icon light>compare_arrows</v-icon>
-          </v-list-tile-action>
-          <v-list-tile-title>Switch drawer (click me)</v-list-tile-title>
-        </v-list-tile>
-      </v-list>
-    </v-navigation-drawer>
-    <v-footer :fixed="fixed">
-      <span>&copy; 2017</span>
-    </v-footer>
-  </v-app>
+  </div>
 </template>
 
 <script>
+  import currencyService from './service/currencyService';
+  import twitterService from './service/twitterService';
+  import tweetService from './service/tweetService';
+
   export default {
     data () {
       return {
-        clipped: false,
-        drawer: true,
-        fixed: false,
-        items: [
-          { icon: 'bubble_chart', title: 'Inspire' }
-        ],
-        miniVariant: false,
-        right: true,
-        rightDrawer: false,
-        title: 'Vuetify.js'
+        currencyService,
+        page: 0,
+        twitters: twitterService.all(),
+        currencies: currencyService.all(),
+        tweets: [],
+        fetchTweetsInterval: 30000,
+      };
+    },
+
+    mounted() {
+      this.getPaginatedTweets();
+
+      setInterval(async () => {
+        await this.getPaginatedTweets();
+      }, this.fetchTweetsInterval);
+    },
+
+    methods: {
+      openSideBar() {
+        this.$refs.sidebar.open();
+      },
+
+      async getPaginatedTweets() {
+        const pagination = await tweetService.paginated(this.page);
+        this.tweets = pagination.content;
+      },
+
+      getTweetDate(createdAt) {
+        const date = new Date(createdAt);
+
+        if (date.getDay() === new Date().getDay()) {
+          return date.toLocaleTimeString();
+        }
+
+        return date.toLocaleString();
       }
-    }
-  }
+    },
+
+    computed: {
+      isBooted() {
+        return this.twitters.length > 0 && this.currencies.length > 0;
+      },
+    },
+  };
 </script>
 
-<style lang="stylus">
-  @import './stylus/main'
+<style lang="sass">
+  @import "~vue-material/dist/vue-material.css"
+
+  html, body, .app-viewport
+    height: 100%
+    overflow: hidden
+
+  .app-viewport
+    display: flex
+    flex-flow: column
+
+  .main-toolbar
+    position: relative
+    z-index: 10
+
+  .md-fab
+    margin: 0
+    position: absolute
+    bottom: -20px
+    left: 16px
+    z-index: 10
+
+    .md-icon
+      color: #fff
+
+  .md-title
+    padding-left: 8px
+    color: #fff
+
+  .main-content
+    position: relative
+    z-index: 1
+    overflow: auto
+
+  .md-list-action .md-icon
+    color: rgba(#000, .26)
+
+  .md-avatar-icon .md-icon
+    color: #fff !important
+
+  .md-sidenav .md-list-text-container > :nth-child(2)
+    color: rgba(#fff, .54)
+
+  .md-account-header
+    .md-list-item:hover .md-button:hover
+      background-color: inherit
+
+    .md-avatar-list .md-list-item-container:hover
+      background: none !important
+
 </style>
